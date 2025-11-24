@@ -60,6 +60,23 @@
 
         <!-- 右上 CMA ログインエリア -->
         <div class="topbar-right">
+            <div class="profile-selector">
+                <div class="profile-selector-header">
+                    <span class="profile-label">プロファイル</span>
+                    <span class="profile-helper">接続先を選択してください</span>
+                </div>
+                <div class="profile-selector-body">
+                    <div class="profile-select-wrap">
+                        <span class="profile-select-icon" aria-hidden="true">🔰</span>
+                        <select id="cma-profile-select" class="profile-select" disabled>
+                            <option>読み込み中...</option>
+                        </select>
+                    </div>
+                    <span id="cma-login-status" class="login-status-badge login-status-off">
+                        未ログイン
+                    </span>
+                </div>
+            </div>
             <button id="cma-login-button" class="btn btn-cma-login">
                 CMAログイン
             </button>
