@@ -33,6 +33,8 @@ def create_app(config_class: type[Config] = Config) -> Flask:
     # ==== 終了用エンドポイント ====
     @app.route("/shutdown", methods=["POST"])
     def shutdown():
+        cleanup_cma_state()
+        cleanup_response_store()
         func = request.environ.get("werkzeug.server.shutdown")
         if func is None:
             # Werkzeug以外の場合は強制終了
