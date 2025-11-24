@@ -7,6 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==== CMA ログイン UI 制御 ====
     const cmaLoginButton = document.getElementById("cma-login-button");
     const cmaLoginStatus = document.getElementById("cma-login-status");
+    const cmaProfileSelect = document.getElementById("cma-profile-select");
     let cmaStatusTimer = null;
 
     function setStatusClass(mode) {
@@ -49,10 +50,55 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // ページ表示時に一度ステータスをチェック
+    async function loadCmaProfiles() {
+        if (!cmaProfileSelect) return;
+
+        try {
+            const res = await fetch("/cma/profiles");
+            if (!res.ok) {
+                throw new Error("HTTP " + res.status);
+            }
+
+            const data = await res.json();
+            if (data.status !== "ok") {
+                throw new Error(data.message || "プロファイル取得に失敗しました");
+            }
+
+            cmaProfileSelect.innerHTML = "";
+
+            const placeholder = document.createElement("option");
+            placeholder.value = "";
+            placeholder.textContent = "選択してください";
+            cmaProfileSelect.appendChild(placeholder);
+
+            data.profiles.forEach((profile) => {
+                const opt = document.createElement("option");
+                opt.value = profile.name;
+                opt.textContent = profile.name;
+                cmaProfileSelect.appendChild(opt);
+            });
+
+            cmaProfileSelect.disabled = false;
+        } catch (e) {
+            console.error("プロファイル取得エラー", e);
+            cmaProfileSelect.innerHTML = "";
+            const opt = document.createElement("option");
+            opt.textContent = "プロファイル読み込み失敗";
+            cmaProfileSelect.appendChild(opt);
+            cmaProfileSelect.disabled = true;
+
+            if (cmaLoginStatus) {
+                cmaLoginStatus.textContent = "プロファイル未設定";
+                setStatusClass("login-status-off");
+            }
+        }
+    }
+
+    // ページ表示時にステータス確認とプロファイル取得を実行
     if (cmaLoginStatus) {
         fetchCmaStatusOnce();
     }
+    loadCmaProfiles();
 
     if (cmaLoginButton) {
         cmaLoginButton.addEventListener("click", async () => {
@@ -64,12 +110,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     setStatusClass("login-status-processing");
                 }
 
+                const selectedProfile = cmaProfileSelect ? cmaProfileSelect.value : "";
+                if (!selectedProfile) {
+                    throw new Error("ログインプロファイルを選択してください。");
+                }
+
                 const response = await fetch("/cma/login", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
-                    body: JSON.stringify({}),
+                    body: JSON.stringify({ profile: selectedProfile }),
                 });
 
                 const data = await response.json();
@@ -85,6 +136,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (!cmaStatusTimer) {
                         cmaStatusTimer = setInterval(fetchCmaStatusOnce, 5000);
                     }
+                } else if (data.status === "error") {
+                    throw new Error(data.message || "ログイン開始に失敗しました。");
                 } else {
                     cmaLoginStatus.textContent = "状態不明";
                     setStatusClass("login-status-off");
@@ -94,7 +147,7 @@ document.addEventListener("DOMContentLoaded", () => {
             } catch (e) {
                 console.error("CMA login error", e);
                 if (cmaLoginStatus) {
-                    cmaLoginStatus.textContent = "エラー";
+                    cmaLoginStatus.textContent = e?.message || "エラー";
                     setStatusClass("login-status-off");
                 }
                 cmaLoginButton.disabled = false;

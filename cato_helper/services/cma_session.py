@@ -41,9 +41,66 @@ CMA_GRAPHQL_URL: Final[str] = f"https://{TENANT}.cc.catonetworks.com/api/graphql
 # このツールと同じディレクトリに state ファイルを置く
 STATE_FILE: Final[Path] = Path("cato_state.json")
 
-# ★ 本番では環境変数などから読むのを推奨
-EMAIL: Final[str] = os.getenv("CATO_EMAIL", "your-email@example.com")
-PASSWORD: Final[str] = os.getenv("CATO_PASSWORD", "CHANGE_ME")
+LOGIN_PROFILE_FILE: Final[Path] = Path(__file__).with_name("login_profiles.json")
+PLACEHOLDER_EMAIL: Final[str] = "your-email@example.com"
+PLACEHOLDER_PASSWORD: Final[str] = "CHANGE_ME"
+
+
+def load_login_profiles() -> dict[str, dict[str, str]]:
+    """プロファイル一覧をファイルから読み込む。
+
+    Returns:
+        {"profile_name": {"EMAIL": "...", "PASSWORD": "..."}, ...}
+
+    Raises:
+        RuntimeError: ファイル欠損や JSON フォーマット不正、プロファイル未定義時。
+    """
+
+    if not LOGIN_PROFILE_FILE.exists():
+        raise RuntimeError(
+            "CMA ログイン用のプロファイルファイルが存在しません。\n"
+            f"{LOGIN_PROFILE_FILE} を作成し、EMAIL/PASSWORD を設定してください。"
+        )
+
+    try:
+        with LOGIN_PROFILE_FILE.open("r", encoding="utf-8") as f:
+            profiles = json.load(f)
+    except json.JSONDecodeError as e:  # noqa: BLE001
+        raise RuntimeError(
+            f"プロファイルファイルの JSON パースに失敗しました: {e}"
+        ) from e
+
+    if not isinstance(profiles, dict) or not profiles:
+        raise RuntimeError("プロファイルが定義されていません。少なくとも1件定義してください。")
+
+    return profiles
+
+
+def resolve_login_profile(profile_name: str | None) -> tuple[str, str]:
+    """指定されたプロファイルから EMAIL / PASSWORD を取得する。"""
+
+    if not profile_name:
+        raise RuntimeError("CMA ログイン用のプロファイル名が指定されていません。")
+
+    profiles = load_login_profiles()
+    profile = profiles.get(profile_name)
+    if profile is None:
+        raise RuntimeError(f"指定されたプロファイル '{profile_name}' は存在しません。")
+
+    email = profile.get("EMAIL")
+    password = profile.get("PASSWORD")
+
+    if email in (PLACEHOLDER_EMAIL, "", None):
+        raise RuntimeError(
+            f"プロファイル '{profile_name}' の EMAIL が未設定です。"
+        )
+
+    if password in (PLACEHOLDER_PASSWORD, "", None):
+        raise RuntimeError(
+            f"プロファイル '{profile_name}' の PASSWORD が未設定です。"
+        )
+
+    return str(email), str(password)
 
 
 def has_cma_state() -> bool:
@@ -140,7 +197,7 @@ def get_cma_status() -> dict[str, Any]:
         }
 
 
-def login_via_playwright() -> None:
+def login_via_playwright(profile_name: str | None) -> None:
     """Playwright を使って CMA にログインし、セッション情報を保存する。
 
     - ブラウザウィンドウが立ち上がる（headless=False）ので、
@@ -149,14 +206,7 @@ def login_via_playwright() -> None:
       STATE_FILE に storage_state を保存して、ブラウザを閉じます。
     """
 
-    # EMAIL / PASSWORD がそのままだと危険なので、簡易チェック
-    if EMAIL == "your-email@example.com" or PASSWORD in ("CHANGE_ME", "", None):
-        raise RuntimeError(
-            """CMA ログイン用の EMAIL / PASSWORD が設定されていません。\n"""
-            """環境変数 CATO_EMAIL / CATO_PASSWORD を設定するか、\n"""
-            """cato_helper/services/cma_session.py 内の EMAIL / PASSWORD を\n"""
-            """適切な値に書き換えてください。"""
-        )
+    email, password = resolve_login_profile(profile_name)
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False, slow_mo=150)
@@ -173,7 +223,7 @@ def login_via_playwright() -> None:
             page.wait_for_selector('input#username[name="username"]', timeout=30_000)
 
             print("　メールアドレスを入力します...")
-            page.fill('#username', EMAIL)
+            page.fill('#username', email)
 
             print("　Next ボタンをクリックします...")
             next_button_selector = 'input.btn-submit[name="submit"][value="Next"]'
@@ -200,10 +250,10 @@ def login_via_playwright() -> None:
             page.wait_for_selector('input[name="password"]', timeout=30_000)
 
             print("　username（メールアドレス）を入力します...")
-            page.fill('input[name="username"]', EMAIL)
+            page.fill('input[name="username"]', email)
 
             print("　パスワードを入力します...")
-            page.fill('input[name="password"]', PASSWORD)
+            page.fill('input[name="password"]', password)
 
             print("　Log in ボタンをクリックします...")
             login_button_selector = 'input.btn-submit[name="submit"][value="Log in"]'
