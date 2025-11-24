@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const cmaLoginStatus = document.getElementById("cma-login-status");
     const cmaProfileSelect = document.getElementById("cma-profile-select");
     let cmaStatusTimer = null;
+    const defaultCmaLoginText = cmaLoginButton?.textContent;
 
     function setStatusClass(mode) {
         if (!cmaLoginStatus) return;
@@ -104,7 +105,6 @@ document.addEventListener("DOMContentLoaded", () => {
         cmaLoginButton.addEventListener("click", async () => {
             try {
                 cmaLoginButton.disabled = true;
-                cmaLoginButton.textContent = "ログイン処理中...";
                 if (cmaLoginStatus) {
                     cmaLoginStatus.textContent = "ログイン処理中...";
                     setStatusClass("login-status-processing");
@@ -130,7 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     // すでにログイン済みなら即ステータス確認
                     await fetchCmaStatusOnce();
                     cmaLoginButton.disabled = false;
-                    cmaLoginButton.textContent = "CMAログイン";
+                    cmaLoginButton.textContent = defaultCmaLoginText;
                 } else if (data.status === "started") {
                     // ログイン処理中 → 5秒ごとにステータスをポーリング
                     if (!cmaStatusTimer) {
@@ -142,7 +142,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     cmaLoginStatus.textContent = "状態不明";
                     setStatusClass("login-status-off");
                     cmaLoginButton.disabled = false;
-                    cmaLoginButton.textContent = "CMAログイン";
+                    cmaLoginButton.textContent = defaultCmaLoginText;
                 }
             } catch (e) {
                 console.error("CMA login error", e);
@@ -151,7 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     setStatusClass("login-status-off");
                 }
                 cmaLoginButton.disabled = false;
-                cmaLoginButton.textContent = "CMAログイン";
+                cmaLoginButton.textContent = defaultCmaLoginText;
             }
         });
     }
