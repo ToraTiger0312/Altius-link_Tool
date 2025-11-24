@@ -36,19 +36,21 @@
                 <span class="top-nav-item disabled">Resources</span>
                 <span class="top-nav-item disabled">Account</span>
             </nav>
+
+            <div class="topbar-controls">
+                <div class="profile-selector">
+                    <select id="cma-profile-select" class="profile-select" disabled>
+                        <option>読み込み中...</option>
+                    </select>
+                    <span id="cma-login-status" class="login-status-badge login-status-off">
+                        未ログイン
+                    </span>
+                </div>
+            </div>
         </div>
 
         <!-- 右上 CMA ログインエリア -->
         <div class="topbar-right">
-            <label class="profile-selector">
-                <span class="profile-label">プロファイル</span>
-                <select id="cma-profile-select" class="profile-select" disabled>
-                    <option>読み込み中...</option>
-                </select>
-            </label>
-            <span id="cma-login-status" class="login-status-badge login-status-off">
-                未ログイン
-            </span>
             <button id="cma-login-button" class="btn btn-cma-login">
                 CMAログイン
             </button>
