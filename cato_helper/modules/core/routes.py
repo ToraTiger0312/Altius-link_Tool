@@ -1,9 +1,15 @@
 ﻿# cato_helper/modules/core/routes.py
 from . import bp
-from flask import render_template, jsonify
+from flask import render_template, jsonify, request
 
 import threading
-from ...services.cma_session import login_via_playwright, has_cma_state, get_cma_status
+from ...services.cma_session import (
+    get_cma_status,
+    has_cma_state,
+    load_login_profiles,
+    login_via_playwright,
+    resolve_login_profile,
+)
 
 
 @bp.route("/")
@@ -19,9 +25,17 @@ def cma_login():
     if has_cma_state():
         return jsonify({"status": "already_logged_in"})
 
+    body = request.get_json(silent=True) or {}
+    profile_name = body.get("profile") or body.get("profile_name")
+
+    try:
+        resolve_login_profile(profile_name)
+    except RuntimeError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
     def worker():
         try:
-            login_via_playwright()
+            login_via_playwright(profile_name)
         except Exception as e:  # noqa: BLE001
             print(f"[CMA LOGIN] エラー: {e}")
 
@@ -35,3 +49,14 @@ def cma_status():
     """CMA ログイン状態とアカウント名を返すエンドポイント。"""
     status = get_cma_status()
     return jsonify(status)
+
+
+@bp.route("/cma/profiles", methods=["GET"])
+def cma_profiles():
+    """利用可能な CMA ログインプロファイル一覧を返す。"""
+    try:
+        profiles = load_login_profiles()
+    except RuntimeError as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+    return jsonify({"status": "ok", "profiles": [{"name": name} for name in profiles.keys()]})

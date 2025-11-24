@@ -1,0 +1,6 @@
+{
+  "default": {
+    "EMAIL": "your-email@example.com",
+    "PASSWORD": "CHANGE_ME"
+  }
+}
