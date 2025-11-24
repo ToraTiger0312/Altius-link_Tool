@@ -1,0 +1,33 @@
+﻿<!-- cato_helper/templates/network/static_route.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div class="breadcrumbs">
+        <span>Network</span>
+        <span> / </span>
+        <span>Site関連の設定</span>
+        <span> / </span>
+        <span>Static Route追加</span>
+    </div>
+    <h1 class="page-title">Static Route追加（Site）</h1>
+</div>
+
+<div class="tool-sections">
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Site に Static Route を追加</div>
+        </div>
+        <div class="card-body">
+            <p>
+                ここでは Cato の Site に対して Static Route を追加するツールを実装していきます。<br>
+                今の時点では画面ひな型だけで、Cato API との連携はまだ行っていません。
+            </p>
+            <p style="margin-top: 8px; font-size: 14px; color: #666;">
+                上部の「Network」タブと左側メニュー「Site関連の設定 → Static Route追加」が表示されていれば、
+                画面遷移の土台は完成です。
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

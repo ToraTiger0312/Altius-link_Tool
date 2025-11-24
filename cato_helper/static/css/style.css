@@ -1,0 +1,460 @@
+﻿/* ============================
+   全体レイアウト・共通設定
+   ============================ */
+
+/* リセット & 共通フォント */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+    background-color: #f5f7fb;
+    color: #333;
+    font-size: 16px; /* ベースの文字サイズを少し大きく */
+}
+
+.app-root {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ============================
+   上部バー
+   ============================ */
+
+.topbar {
+    height: 56px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e1e5f0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 16px;
+}
+
+.topbar-left {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.brand-logo {
+    font-weight: 700;
+    margin-right: 24px;
+    color: #0f9d92;
+    font-size: 22px; /* ロゴは少し大きめ */
+}
+
+.top-nav {
+    display: flex;
+    gap: 12px;
+    /* 左メニューと少し間を空けて配置 */
+    margin-left: 100px;
+}
+
+.top-nav-item {
+    font-size: 16px;
+    padding: 4px 8px;
+    color: #555;
+    text-decoration: none;
+    border-radius: 4px;
+}
+
+.top-nav-item.active {
+    border-bottom: 2px solid #0f9d92;
+    color: #0f9d92;
+    font-weight: 600;
+}
+
+/* クリック不可 & Coming Soon ツールチップ */
+.top-nav-item.disabled {
+    cursor: default;
+    color: #999;
+    position: relative;
+    pointer-events: none;
+}
+
+.top-nav-item.disabled::after {
+    content: "Coming Soon";
+    position: absolute;
+    top: 120%;
+    left: 0;
+    background-color: #333;
+    color: #fff;
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateY(2px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.top-nav-item.disabled:hover::after {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ============================
+   メインレイアウト
+   ============================ */
+
+.main-layout {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+}
+
+/* ============================
+   左メニュー
+   ============================ */
+
+.sidebar {
+    width: 220px;
+    background-color: #ffffff;
+    border-right: 1px solid #e1e5f0;
+    padding: 12px 8px;
+    overflow-y: auto;
+}
+
+.sidebar-section {
+    margin-bottom: 16px;
+}
+
+/* セクションヘッダ（灰色背景 & 折り畳みトグル） */
+.sidebar-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    margin: 8px 8px 4px;
+    padding: 6px 8px;
+    background-color: #f0f2f6;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sidebar-section-items {
+    margin-top: 4px;
+}
+
+.sidebar-toggle-icon {
+    font-size: 10px;
+    color: #777;
+    transition: transform 0.15s ease;
+}
+
+.sidebar-item {
+    display: block;
+    padding: 6px 10px;
+    margin: 2px 0;
+    font-size: 15px;
+    text-decoration: none;
+    color: #444;
+    border-radius: 4px;
+}
+
+.sidebar-item.active,
+.sidebar-item:hover {
+    background-color: #e5f6f4;
+    color: #0f9d92;
+}
+
+/* 折り畳み時は中身を隠す & アイコン回転 */
+.sidebar-section.collapsed .sidebar-section-items {
+    display: none;
+}
+
+.sidebar-section.collapsed .sidebar-toggle-icon {
+    transform: rotate(-90deg);
+}
+
+/* ============================
+   メインコンテンツ
+   ============================ */
+
+.main-content {
+    flex: 1;
+    padding: 16px 24px;
+    overflow-y: auto;
+}
+
+/* ページヘッダ */
+.page-header {
+    margin-bottom: 12px;
+}
+
+.breadcrumbs {
+    font-size: 14px;
+    color: #888;
+}
+
+.breadcrumbs span + span::before {
+    content: " / ";
+}
+
+.page-title {
+    font-size: 20px;
+    margin-top: 4px;
+}
+
+/* カード・ツール一覧用 */
+.card {
+    background-color: #ffffff;
+    border-radius: 6px;
+    border: 1px solid #e1e5f0;
+    padding: 12px 16px;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+}
+
+.card-title {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.card-subtitle {
+    font-size: 14px;
+    color: #666;
+}
+
+.card-body {
+    font-size: 14px;
+}
+
+/* 業務支援ツールのリスト用 */
+.tool-sections {
+    margin-top: 12px;
+}
+
+.tool-list {
+    list-style: none;
+}
+
+.tool-item + .tool-item {
+    margin-top: 8px;
+}
+
+.tool-item-title {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.tool-item-desc {
+    font-size: 14px;
+    color: #666;
+    margin-top: 2px;
+}
+
+/* ============================
+   Topology ダミー画面用
+   ============================ */
+
+.top-row {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+}
+
+.sites-card {
+    flex: 1;
+}
+
+.users-card {
+    width: 260px;
+}
+
+.sites-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.status-connected {
+    background-color: #0f9d92;
+}
+
+.status-degraded {
+    background-color: #f6a623;
+}
+
+.status-disconnected {
+    background-color: #d9534f;
+}
+
+.users-summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.users-count {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+/* ツールバー */
+.toolbar-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+}
+
+.search-box input {
+    width: 320px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    border: 1px solid #d0d5e5;
+    font-size: 14px;
+}
+
+.toolbar-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-secondary,
+.btn-primary {
+    padding: 6px 12px;
+    font-size: 14px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    cursor: pointer;
+}
+
+.btn-secondary {
+    border-color: #d0d5e5;
+    background-color: #ffffff;
+}
+
+.btn-primary {
+    background-color: #0f9d92;
+    border-color: #0f9d92;
+    color: #ffffff;
+}
+
+
+/* ==== CMA ログインエリア ==== */
+
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-cma-login {
+    padding: 6px 14px;
+    border-radius: 16px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    background-color: #00a8a8; /* Cato っぽい青緑系 */
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    transition: transform 0.05s ease-out, box-shadow 0.05s ease-out, opacity 0.2s ease-out;
+}
+
+.btn-cma-login:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.18);
+}
+
+.btn-cma-login:disabled {
+    opacity: 0.7;
+    cursor: default;
+    transform: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.login-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 80px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+/* 状態別カラー */
+
+.login-status-off {
+    background-color: #f5f5f5;
+    color: #666666;
+    border-color: #dddddd;
+}
+
+.login-status-on {
+    background-color: #e6f7f5;
+    color: #007c7c;
+    border-color: #8cd4cc;
+}
+
+.login-status-processing {
+    background-color: #fff8e1;
+    color: #b98500;
+    border-color: #ffd54f;
+}
+
+/* 右下「終了」ボタン */
+.btn-exit {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    padding: 10px 18px;
+    border-radius: 24px;
+    border: none;
+    background-color: #999;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    z-index: 1000;
+}
+
+.btn-exit:hover {
+    filter: brightness(0.95);
+    transform: translateY(-1px);
+}
+
+.btn-exit:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
