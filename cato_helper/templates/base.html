@@ -6,88 +6,73 @@
     <title>Cato Helper</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script defer src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script defer src="{{ url_for('static', filename='js/static_route.js') }}"></script>
 </head>
 <body>
 {% set current_endpoint = request.endpoint or '' %}
 
 <div class="app-root">
     <!-- 上部バー -->
-    <header class="topbar">
-        <div class="topbar-left">
-            <div class="brand-logo">Altius Link</div>
+<header class="topbar">
+    <div class="topbar-left">
+        <div class="brand-logo">Altius Link</div>
 
-            <nav class="top-nav">
-                <!-- 業務支援ツール -->
-                <a href="{{ url_for('core.index') }}"
-                   class="top-nav-item {% if current_endpoint and current_endpoint.startswith('core.') %}active{% endif %}">
-                    業務支援ツール
-                </a>
+        <nav class="top-nav">
+            <!-- 業務支援ツール -->
+            <a href="{{ url_for('core.index') }}"
+               class="top-nav-item {% if current_endpoint and current_endpoint.startswith('core.') %}active{% endif %}">
+                業務支援ツール
+            </a>
 
-                <!-- Network 関連（Site への Network 追加ツール） -->
-                <a href="{{ url_for('network.static_route_add') }}"
-                   class="top-nav-item {% if current_endpoint and current_endpoint.startswith('network.') %}active{% endif %}">
-                    Network
-                </a>
+            <!-- Network 関連 -->
+            <a href="{{ url_for('network.static_route_add') }}"
+               data-requires-cma-login="true"
+               class="top-nav-item {% if current_endpoint and current_endpoint.startswith('network.') %}active{% endif %}">
+                Network
+            </a>
 
-                <!-- 以下は Coming Soon & クリック不可 -->
-                <span class="top-nav-item disabled">Home</span>
-                <span class="top-nav-item disabled">Access</span>
-                <span class="top-nav-item disabled">Security</span>
-                <span class="top-nav-item disabled">Resources</span>
-                <span class="top-nav-item disabled">Account</span>
-            </nav>
+            <!-- Coming Soon 達 -->
+            <span class="top-nav-item disabled">Home</span>
+            <span class="top-nav-item disabled">Access</span>
+            <span class="top-nav-item disabled">Security</span>
+            <span class="top-nav-item disabled">Resources</span>
+            <span class="top-nav-item disabled">Account</span>
+        </nav>
+    </div>  <!-- ★ここで topbar-left を閉じる -->
 
-            <div class="topbar-controls">
-                <div class="profile-selector">
+    <!-- 右上 CMA ログインエリア -->
+    <div class="topbar-right">
+        <div class="profile-selector">
+            <div class="profile-selector-body">
+                <div class="profile-select-wrap">
                     <select id="cma-profile-select" class="profile-select" disabled>
                         <option>読み込み中...</option>
                     </select>
-                    <span id="cma-login-status" class="login-status-badge login-status-off">
-                        未ログイン
-                    </span>
-                    <div class="profile-selector-header">
-                        <span class="profile-label">プロファイル</span>
-                        <span class="profile-helper">接続先を選択してください</span>
-                    </div>
-                    <div class="profile-selector-body">
-                        <div class="profile-select-wrap">
-                            <span class="profile-select-icon" aria-hidden="true">🔰</span>
-                            <select id="cma-profile-select" class="profile-select" disabled>
-                                <option>読み込み中...</option>
-                            </select>
-                        </div>
-                        <span id="cma-login-status" class="login-status-badge login-status-off">
-                            未ログイン
-                        </span>
-                    </div>
                 </div>
+                <!-- ★ ステータスバー：未ログイン / ログイン中 / ログイン済み を表示 -->
+                <span id="cma-login-status" class="login-status-badge login-status-off">
+                    未ログイン
+                </span>
             </div>
         </div>
 
-        <!-- 右上 CMA ログインエリア -->
-        <div class="topbar-right">
-            <div class="profile-selector">
-                <div class="profile-selector-header">
-                    <span class="profile-label">プロファイル</span>
-                    <span class="profile-helper">接続先を選択してください</span>
-                </div>
-                <div class="profile-selector-body">
-                    <div class="profile-select-wrap">
-                        <span class="profile-select-icon" aria-hidden="true">🔰</span>
-                        <select id="cma-profile-select" class="profile-select" disabled>
-                            <option>読み込み中...</option>
-                        </select>
-                    </div>
-                    <span id="cma-login-status" class="login-status-badge login-status-off">
-                        未ログイン
-                    </span>
-                </div>
-            </div>
-            <button id="cma-login-button" class="btn btn-cma-login">
-                CMAログイン
-            </button>
-        </div>
-    </header>
+        <!-- ★ ステータスとボタンの区切り -->
+        <span class="cma-toolbar-separator">|</span>
+
+        <!-- ★ ログインボタン -->
+        <button id="cma-login-button" class="btn btn-cma-login">
+            ログイン
+        </button>
+
+
+        <!-- ★ 新規：ログアウトボタン（最初は無効） -->
+        <button id="cma-logout-button" class="btn btn-cma-logout" disabled>
+            ログアウト
+        </button>
+    </div>
+
+</header>
+
 
     <!-- メインレイアウト -->
     <div class="main-layout">
@@ -116,6 +101,7 @@
                 </div>
                 <div class="sidebar-section-items">
                     <a class="sidebar-item {% if current_endpoint == 'network.static_route_add' %}active{% endif %}"
+                       data-requires-cma-login="true"
                        href="{{ url_for('network.static_route_add') }}">
                         Static Route追加
                     </a>
@@ -144,7 +130,7 @@
 </div>
 
 <!-- 右下の終了ボタン -->
-<button id="app-exit-button" class="btn btn-exit">終了</button>
+<button id="app-exit-button" class="btn btn-exit">⏻</button>
 
 </body>
 </html>

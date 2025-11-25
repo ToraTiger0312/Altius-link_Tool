@@ -9,8 +9,10 @@ from ...services.cma_session import (
     load_login_profiles,
     login_via_playwright,
     resolve_login_profile,
+    cleanup_cma_state,
 )
 
+from ...services.response_store import cleanup_response_store
 
 @bp.route("/")
 def index():
@@ -25,17 +27,17 @@ def cma_login():
     if has_cma_state():
         return jsonify({"status": "already_logged_in"})
 
-    body = request.get_json(silent=True) or {}
-    profile_name = body.get("profile") or body.get("profile_name")
+    body = request.get_json(silent=True) or {} # type: ignore[reportUnknownMemberType]
+    profile_name = body.get("profile") or body.get("profile_name") # type: ignore[reportUnknownMemberType]
 
     try:
-        resolve_login_profile(profile_name)
+        resolve_login_profile(profile_name) # type: ignore[reportUnknownMemberType]
     except RuntimeError as e:
         return jsonify({"status": "error", "message": str(e)}), 400
 
     def worker():
         try:
-            login_via_playwright(profile_name)
+            login_via_playwright(profile_name) # type: ignore[reportUnknownMemberType]
         except Exception as e:  # noqa: BLE001
             print(f"[CMA LOGIN] エラー: {e}")
 
@@ -50,6 +52,15 @@ def cma_status():
     status = get_cma_status()
     return jsonify(status)
 
+
+@bp.route("/cma/logout", methods=["POST"])
+def cma_logout():
+    """CMA からログアウトし、セッション情報と保存済みレスポンスを削除する。"""
+    # Playwright の state ファイルを削除
+    cleanup_cma_state()
+    # loginState など GraphQL のレスポンス保存ディレクトリを削除
+    cleanup_response_store()
+    return jsonify({"status": "ok"})
 
 @bp.route("/cma/profiles", methods=["GET"])
 def cma_profiles():

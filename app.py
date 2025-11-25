@@ -1,4 +1,5 @@
 ﻿# app.py
+import os
 import threading
 import time
 import urllib.request
@@ -6,24 +7,29 @@ import webbrowser
 
 from cato_helper import create_app
 
-PORT = 5000
+# ポート番号やデバッグモードは環境変数から変更できるようにしておく
+PORT = int(os.environ.get("CATO_HELPER_PORT", 5000))
+DEBUG = os.environ.get("CATO_HELPER_DEBUG", "1") == "1"
 
 
-def open_browser_when_ready():
-    """Flask サーバが立ち上がるまで待ってからブラウザを開く。"""
+def open_browser_when_ready(timeout: int = 30) -> None:
+    """Flask サーバが立ち上がるまで待ってからブラウザを開く。
+
+    timeout 秒待っても応答がない場合はあきらめる。
+    """
     url = f"http://127.0.0.1:{PORT}/"
 
+    start = time.time()
     while True:
         try:
-            # サーバに軽くアクセスしてみて、応答が返ってくれば OK
-            with urllib.request.urlopen(url, timeout=1):
-                pass
-            break
+            with urllib.request.urlopen(url) as _:
+                break
         except Exception:
-            # まだ立ち上がってない場合は少し待って再トライ
-            time.sleep(0.3)
+            if time.time() - start > timeout:
+                # あまり待ちすぎないようにする
+                return
+            time.sleep(0.5)
 
-    # サーバ準備完了したらブラウザでタブを開く
     webbrowser.open(url)
 
 
@@ -37,4 +43,4 @@ if __name__ == "__main__":
     ).start()
 
     # リローダーが二重起動させないように
-    app.run(port=PORT, debug=True, use_reloader=False)
+    app.run(port=PORT, debug=DEBUG, use_reloader=False)

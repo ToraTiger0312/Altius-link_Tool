@@ -387,27 +387,16 @@ body {
 .profile-selector {
     display: flex;
     align-items: center;
-    gap: 10px;
-    min-width: 260px;
-    background-color: #ffffff;
-    border: 1px solid #e1e5f0;
-    border-radius: 8px;
-    padding: 8px 12px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 280px;
-    height: 44px;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
-    background: linear-gradient(135deg, #f7f9fc 0%, #eef3fb 100%);
-    border: 1px solid #dfe6f3;
-    border-radius: 10px;
-    padding: 8px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 240px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    gap: 8px;
+
+    /* 背景系の装飾を全部オフ */
+    background: none;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+    min-width: auto;
 }
 
 .profile-selector-header {
@@ -419,17 +408,55 @@ body {
     gap: 8px;
 }
 
+/* 既存：CMAログインボタン */
 .btn-cma-login {
-    padding: 6px 14px;
-    border-radius: 16px;
-    border: none;
-    cursor: pointer;
-    font-size: 0.9rem;
-    background-color: #00a8a8; /* Cato っぽい青緑系 */
+    background-color: #18b7b4;
     color: #ffffff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-    transition: transform 0.05s ease-out, box-shadow 0.05s ease-out, opacity 0.2s ease-out;
+    border-radius: 999px;
+    padding: 6px 18px;
+    font-weight: 600;
+    border: none;
 }
+
+.btn-cma-login:hover:enabled {
+    background-color: #12a09e;
+}
+
+/* ★追加：ログイン完了後の見た目（グレー） */
+.btn-cma-login-logged-in {
+    background-color: #f0f0f0;
+    color: #999999;
+    border: 1px solid #dddddd;
+}
+
+.btn-cma-login-logged-in:hover:enabled {
+    background-color: #e6e6e6;
+}
+
+
+/* ログアウトボタン（ログイン時・有効） */
+.btn-cma-logout {
+    background-color: #ffe5e5;
+    color: #c0392b;
+    border-radius: 999px;
+    padding: 6px 18px;
+    font-weight: 600;
+    border: 1px solid #f5b7b1;
+}
+
+.btn-cma-logout:hover:enabled {
+    background-color: #ffd6d6;
+    border-color: #f1948a;
+}
+
+/* ★ 追加：未ログイン時（disabled）の見た目を灰色にする */
+.btn-cma-logout:disabled {
+    background-color: #f0f0f0;
+    color: #999999;
+    border-color: #dddddd;
+    cursor: default;
+}
+
 
 .btn-cma-login:hover {
     transform: translateY(-1px);
@@ -456,6 +483,11 @@ body {
     white-space: nowrap;
 }
 
+.login-status-badge.login-status-on {
+    font-size: 16px;      /* 約2倍 */
+    padding: 6px 16px;    /* こちらも少し広めに */
+}
+
 .profile-select {
     flex: 1;
     min-width: 170px;
@@ -463,6 +495,8 @@ body {
     border-radius: 6px;
     border: 1px solid #dfe6f3;
     background: #ffffff;
+}
+
 .profile-selector-body {
     display: flex;
     align-items: center;
@@ -544,7 +578,7 @@ body {
     padding: 10px 18px;
     border-radius: 24px;
     border: none;
-    background-color: #999;
+    background-color: #c02121;
     color: #fff;
     font-size: 14px;
     cursor: pointer;

@@ -6,10 +6,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ==== CMA ログイン UI 制御 ====
     const cmaLoginButton = document.getElementById("cma-login-button");
+    const cmaLogoutButton = document.getElementById("cma-logout-button");
     const cmaLoginStatus = document.getElementById("cma-login-status");
     const cmaProfileSelect = document.getElementById("cma-profile-select");
+
     let cmaStatusTimer = null;
     const defaultCmaLoginText = cmaLoginButton?.textContent;
+    const profileStorageKey = "cato_helper_cma_profile_name";
+
+    // 状態フラグ
+    let isCmaLoginInProgress = false;
+    let isCmaLoggedIn = false;
+    let currentCmaProfileName = null;
+
+    // 前回ログイン時のプロファイル名を localStorage から復元
+    try {
+        currentCmaProfileName = window.localStorage.getItem(profileStorageKey);
+    } catch (e) {
+        currentCmaProfileName = null;
+    }
 
     function setStatusClass(mode) {
         if (!cmaLoginStatus) return;
@@ -23,8 +38,44 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function updateLogoutButtonState() {
+        if (!cmaLogoutButton) return;
+        // ログイン済みのときだけ押せる
+        cmaLogoutButton.disabled = !isCmaLoggedIn;
+    }
+
+    // ログイン後のプロファイル表示（セレクトボックス非表示）
+    function applyLoggedInProfileView() {
+        if (!cmaProfileSelect) return;
+
+        // select の親要素（＝カプセルっぽい薄い枠）ごと非表示にする
+        const wrap = cmaProfileSelect.parentElement;
+        if (wrap) {
+            wrap.style.display = "none";
+        } else {
+            // 念のため：親が取れなかった場合は select 自体を消す
+            cmaProfileSelect.style.display = "none";
+        }
+    }
+
+    function applyLoggedOutProfileView() {
+        if (!cmaProfileSelect) return;
+
+        const wrap = cmaProfileSelect.parentElement;
+        if (wrap) {
+            // display の指定を元に戻す（CSS のデフォルトに任せる）
+            wrap.style.display = "";
+        } else {
+            cmaProfileSelect.style.display = "";
+        }
+    }
+
+
+
+    // CMAログイン状態取得
     async function fetchCmaStatusOnce() {
         if (!cmaLoginStatus) return;
+
         try {
             const res = await fetch("/cma/status");
             if (!res.ok) {
@@ -34,23 +85,73 @@ document.addEventListener("DOMContentLoaded", () => {
             console.log("CMA status:", data);
 
             if (data.logged_in) {
-                const name =
-                    data.account_display_name ||
-                    data.account_name ||
-                    "ログイン済み";
-                cmaLoginStatus.textContent = name;
+                // ★ ログイン済み
+                isCmaLoggedIn = true;
+                isCmaLoginInProgress = false;
+
+                // ステータスタグには「環境名」を表示する
+                // 1) ログイン時に選択されたプロファイル名（= 環境名）
+                // 2) それが無ければサーバから返る account_display_name
+                // 3) どちらも無ければ従来どおり「ログイン済み」
+                let envLabel = currentCmaProfileName;
+                if (!envLabel && data.account_display_name) {
+                    envLabel = data.account_display_name;
+                }
+                if (!envLabel) {
+                    envLabel = "ログイン済み";
+                }
+                cmaLoginStatus.textContent = envLabel;
                 setStatusClass("login-status-on");
+
+                // ログイン済みならプロファイルは “環境名だけ表示”
+                if (currentCmaProfileName && cmaProfileSelect) {
+                    applyLoggedInProfileView();
+                }
+
+                if (cmaStatusTimer) {
+                    clearInterval(cmaStatusTimer);
+                    cmaStatusTimer = null;
+                }
+
+                // ★ ログインボタンをグレー見た目に
+                if (cmaLoginButton) {
+                    cmaLoginButton.classList.add("btn-cma-login-logged-in");
+                }
+
             } else {
-                cmaLoginStatus.textContent = "未ログイン";
-                setStatusClass("login-status-off");
+                // 未ログイン or ログイン中
+                isCmaLoggedIn = false;
+
+                // ★ 未ログイン扱いなのでセレクトボックスを表示状態に戻す
+                applyLoggedOutProfileView();
+
+                if (isCmaLoginInProgress) {
+                    cmaLoginStatus.textContent = "ログイン中";
+                    setStatusClass("login-status-processing");
+                } else {
+                    cmaLoginStatus.textContent = "未ログイン";
+                    setStatusClass("login-status-off");
+                }
+
+                // ★ 未ログイン時はグレー見た目クラスを外す
+                if (cmaLoginButton) {
+                    cmaLoginButton.classList.remove("btn-cma-login-logged-in");
+                }
             }
+
+
+            updateLogoutButtonState();
         } catch (e) {
             console.error("CMA status check error", e);
             cmaLoginStatus.textContent = "状態確認エラー";
             setStatusClass("login-status-off");
+            isCmaLoggedIn = false;
+            isCmaLoginInProgress = false;
+            updateLogoutButtonState();
         }
     }
 
+    // プロファイル一覧読み込み（未ログイン時に選択できるようにする）
     async function loadCmaProfiles() {
         if (!cmaProfileSelect) return;
 
@@ -79,7 +180,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 cmaProfileSelect.appendChild(opt);
             });
 
-            cmaProfileSelect.disabled = false;
+            // 未ログイン時は選択可能
+            cmaProfileSelect.disabled = isCmaLoggedIn;
         } catch (e) {
             console.error("プロファイル取得エラー", e);
             cmaProfileSelect.innerHTML = "";
@@ -95,25 +197,47 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // ページ表示時にステータス確認とプロファイル取得を実行
+    // ページ表示時：ステータス確認 & プロファイル取得
     if (cmaLoginStatus) {
         fetchCmaStatusOnce();
     }
     loadCmaProfiles();
+    updateLogoutButtonState();
 
+    // ログインボタン
     if (cmaLoginButton) {
         cmaLoginButton.addEventListener("click", async () => {
             try {
-                cmaLoginButton.disabled = true;
-                if (cmaLoginStatus) {
-                    cmaLoginStatus.textContent = "ログイン処理中...";
-                    setStatusClass("login-status-processing");
-                }
-
                 const selectedProfile = cmaProfileSelect ? cmaProfileSelect.value : "";
                 if (!selectedProfile) {
                     throw new Error("ログインプロファイルを選択してください。");
                 }
+
+                // 選択された環境名を保存
+                currentCmaProfileName = selectedProfile;
+                try {
+                    window.localStorage.setItem(profileStorageKey, selectedProfile);
+                } catch (e) {
+                    console.warn("localStorage set error", e);
+                }
+
+                if (cmaStatusTimer) {
+                    clearInterval(cmaStatusTimer);
+                    cmaStatusTimer = null;
+                }
+
+                isCmaLoginInProgress = true;
+                isCmaLoggedIn = false;
+
+                cmaLoginButton.disabled = true;
+                if (cmaProfileSelect) {
+                    cmaProfileSelect.disabled = true;
+                }
+                if (cmaLoginStatus) {
+                    cmaLoginStatus.textContent = "ログイン中";
+                    setStatusClass("login-status-processing");
+                }
+                updateLogoutButtonState();
 
                 const response = await fetch("/cma/login", {
                     method: "POST",
@@ -128,11 +252,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 if (data.status === "already_logged_in") {
                     // すでにログイン済みなら即ステータス確認
+                    isCmaLoginInProgress = false;
                     await fetchCmaStatusOnce();
                     cmaLoginButton.disabled = false;
                     cmaLoginButton.textContent = defaultCmaLoginText;
                 } else if (data.status === "started") {
-                    // ログイン処理中 → 5秒ごとにステータスをポーリング
+                    // ログイン中 → 5秒ごとにステータスをポーリング
                     if (!cmaStatusTimer) {
                         cmaStatusTimer = setInterval(fetchCmaStatusOnce, 5000);
                     }
@@ -143,19 +268,101 @@ document.addEventListener("DOMContentLoaded", () => {
                     setStatusClass("login-status-off");
                     cmaLoginButton.disabled = false;
                     cmaLoginButton.textContent = defaultCmaLoginText;
+                    isCmaLoginInProgress = false;
                 }
+
+                updateLogoutButtonState();
             } catch (e) {
                 console.error("CMA login error", e);
                 if (cmaLoginStatus) {
                     cmaLoginStatus.textContent = e?.message || "エラー";
                     setStatusClass("login-status-off");
                 }
+                isCmaLoginInProgress = false;
+                isCmaLoggedIn = false;
+                if (cmaProfileSelect) {
+                    // ログインに失敗したら再度選択できるようにする
+                    cmaProfileSelect.disabled = false;
+                }
                 cmaLoginButton.disabled = false;
                 cmaLoginButton.textContent = defaultCmaLoginText;
+                updateLogoutButtonState();
+            }
+        });
+    }
+
+    // ログアウトボタン
+    if (cmaLogoutButton) {
+        cmaLogoutButton.addEventListener("click", async () => {
+            const ok = window.confirm("CMA からログアウトしますか？");
+            if (!ok) return;
+
+            cmaLogoutButton.disabled = true;
+            if (cmaLoginStatus) {
+                cmaLoginStatus.textContent = "ログアウト中...";
+                setStatusClass("login-status-processing");
+            }
+
+            try {
+                if (cmaStatusTimer) {
+                    clearInterval(cmaStatusTimer);
+                    cmaStatusTimer = null;
+                }
+
+                const res = await fetch("/cma/logout", { method: "POST" });
+                if (!res.ok) {
+                    throw new Error("ログアウトに失敗しました。");
+                }
+
+                // セッション・レスポンス削除 → 未ログイン状態に戻す
+                isCmaLoggedIn = false;
+                isCmaLoginInProgress = false;
+                currentCmaProfileName = null;
+                try {
+                    window.localStorage.removeItem(profileStorageKey);
+                } catch (e) {
+                    console.warn("localStorage remove error", e);
+                }
+
+                if (cmaLoginStatus) {
+                    cmaLoginStatus.textContent = "未ログイン";
+                    setStatusClass("login-status-off");
+                }
+
+                // ★ ログアウトしたのでセレクトボックスを再表示
+                applyLoggedOutProfileView();
+
+                if (cmaProfileSelect) {
+                    cmaProfileSelect.disabled = true;
+                    cmaProfileSelect.innerHTML = "";
+                    const opt = document.createElement("option");
+                    opt.textContent = "読み込み中...";
+                    cmaProfileSelect.appendChild(opt);
+                }
+
+                // プロファイルを再取得（未ログインなので再び選択可能にする）
+                loadCmaProfiles();
+
+            } catch (e) {
+                console.error("CMA logout error", e);
+                if (cmaLoginStatus) {
+                    cmaLoginStatus.textContent = "ログアウトエラー";
+                    setStatusClass("login-status-off");
+                }
+            } finally {
+                if (cmaLoginButton) {
+                    cmaLoginButton.disabled = false;
+                    cmaLoginButton.textContent = defaultCmaLoginText;
+                    // ログアウト後は「ログイン済み」見た目のクラスを外して通常色に戻す
+                    cmaLoginButton.classList.remove("btn-cma-login-logged-in");
+                }
+                isCmaLoginInProgress = false;
+                updateLogoutButtonState();
             }
         });
     }
     // ==== CMA ログイン UI 制御ここまで ====
+
 
     // ==== 終了ボタン ====
     const exitButton = document.getElementById("app-exit-button");

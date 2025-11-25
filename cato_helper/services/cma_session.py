@@ -10,8 +10,9 @@ Playwright を使って、
 """
 
 from __future__ import annotations
-from .cma_queries import LOGIN_STATE_QUERY
+from .cma_queries import LOGIN_STATE_QUERY # type: ignore[reportUnknownMemberType]
 from .response_store import save_response
+from typing import Any
 
 import json
 import os
@@ -36,14 +37,17 @@ CC_LOGIN_URL: Final[str] = "https://cc.catonetworks.com"
 CMA_DASHBOARD_PATTERN: Final[str] = rf"https://{TENANT}\.cc\.catonetworks\.com/.*#/account/.*"
 
 # GraphQL エンドポイント
-CMA_GRAPHQL_URL: Final[str] = f"https://{TENANT}.cc.catonetworks.com/api/graphql"
+CMA_GRAPHQL_URL: Final[str] = f"https://{TENANT}.cc.catonetworks.com/api/v1/graphql"
 
 # このツールと同じディレクトリに state ファイルを置く
-STATE_FILE: Final[Path] = Path("cato_state.json")
+STATE_FILE = Path("cato_state.json")
 
 LOGIN_PROFILE_FILE: Final[Path] = Path(__file__).with_name("login_profiles.json")
-PLACEHOLDER_EMAIL: Final[str] = "your-email@example.com"
-PLACEHOLDER_PASSWORD: Final[str] = "CHANGE_ME"
+
+# loginState のキャッシュ（プロセス内でのみ有効）
+_cached_login_state: dict[str, Any] | None = None
+
+
 
 
 def load_login_profiles() -> dict[str, dict[str, str]]:
@@ -73,8 +77,7 @@ def load_login_profiles() -> dict[str, dict[str, str]]:
     if not isinstance(profiles, dict) or not profiles:
         raise RuntimeError("プロファイルが定義されていません。少なくとも1件定義してください。")
 
-    return profiles
-
+    return profiles # type: ignore[reportUnknownMemberType]
 
 def resolve_login_profile(profile_name: str | None) -> tuple[str, str]:
     """指定されたプロファイルから EMAIL / PASSWORD を取得する。"""
@@ -90,16 +93,6 @@ def resolve_login_profile(profile_name: str | None) -> tuple[str, str]:
     email = profile.get("EMAIL")
     password = profile.get("PASSWORD")
 
-    if email in (PLACEHOLDER_EMAIL, "", None):
-        raise RuntimeError(
-            f"プロファイル '{profile_name}' の EMAIL が未設定です。"
-        )
-
-    if password in (PLACEHOLDER_PASSWORD, "", None):
-        raise RuntimeError(
-            f"プロファイル '{profile_name}' の PASSWORD が未設定です。"
-        )
-
     return str(email), str(password)
 
 
@@ -113,6 +106,9 @@ def cleanup_cma_state() -> None:
 
     app.py 終了時に呼び出されることを想定。
     """
+    global _cached_login_state
+    _cached_login_state = None
+
     try:
         if STATE_FILE.exists():
             STATE_FILE.unlink()
@@ -122,40 +118,122 @@ def cleanup_cma_state() -> None:
 
 
 def _build_requests_session_from_state() -> requests.Session:
-    """Playwright の storage_state(JSON) から requests セッションを構築する。"""
     if not STATE_FILE.exists():
-        raise RuntimeError("CMA の state ファイルが存在しません。まず CMA ログインを実行してください。")
+        raise RuntimeError("CMA state file not found")
 
-    with STATE_FILE.open("r", encoding="utf-8") as f:
-        state = json.load(f)
+    state = json.loads(STATE_FILE.read_text(encoding="utf-8"))
 
-    cookies = state.get("cookies", [])
+    tenant_host = f"{TENANT}.cc.catonetworks.com"
+
+    # このリクエストで送りたい Cookie を手動で選別して 1 本のヘッダにする
+    cookie_pairs: list[str] = []
+    for c in state.get("cookies", []):
+        domain = c.get("domain")
+        name = c.get("name")
+        value = c.get("value")
+
+        if not name or value is None:
+            continue
+
+        # GraphQL に関係ありそうなドメインだけ残す
+        if domain not in (
+            tenant_host,
+            ".catonetworks.com",
+            f".{tenant_host}",
+        ):
+            continue
+
+        cookie_pairs.append(f"{name}={value}")
+
+    cookie_header = "; ".join(cookie_pairs)
+
     sess = requests.Session()
-    for c in cookies:
-        # domain / path も設定しておく
-        sess.cookies.set(c.get("name"), c.get("value"), domain=c.get("domain"), path=c.get("path", "/")) # type: ignore[reportUnknownMemberType]
+    sess.headers.update({
+        "Cookie": cookie_header,
+        "Content-Type": "application/json",
+        "Origin": f"https://{tenant_host}",
+        "Referer": f"https://{tenant_host}/?",
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/142.0.0.0 Safari/537.36"
+        ),
+    })
+
+    print("=== BUILT COOKIE HEADER ===")
+    print(cookie_header)
 
     return sess
 
 
+
+from .response_store import save_response
+from typing import Any
+
 def fetch_login_state() -> dict[str, Any]:
     """GraphQL の loginState を叩いてログイン状態を取得する。"""
-    sess = _build_requests_session_from_state()
+    print("=== FETCH_LOGIN_STATE CALLED ===")
 
-    payload = { # type: ignore[reportUnknownMemberType]
+    sess = _build_requests_session_from_state()
+    print("Session built OK")
+
+    payload: dict[str, Any] = {
         "operationName": "loginState",
         "variables": {"authcode": None, "authstate": None},
         "query": LOGIN_STATE_QUERY,
     }
 
-    resp = sess.post(CMA_GRAPHQL_URL, json=payload, timeout=30) # type: ignore[reportUnknownMemberType]
-    resp.raise_for_status()
-    data = resp.json()
+    try:
+        resp = sess.post(CMA_GRAPHQL_URL, json=payload, timeout=30)  # type: ignore[reportUnknownMemberType]
 
-    # レスポンスを一時ファイルに保存
-    save_response("login_state", data)
+        print(">>> request url:", resp.request.url)
+        print(">>> request headers:", resp.request.headers)
+        print(">>> cookie header:", resp.request.headers.get("Cookie"))
 
-    return data.get("data", {}).get("loginState", {})
+        print(f"GraphQL status: {resp.status_code}")
+    except Exception as e:  # 通信レベルで失敗
+        print(f"[fetch_login_state] GraphQL request failed: {e!r}")
+        # ここでも一応「リクエスト失敗情報」を保存しておく
+        save_response("login_state_error", {"stage": "request", "error": str(e)})
+        # 上には投げておく（get_cma_status が catch する）
+        raise
+
+    text = resp.text
+
+    # まずは「生のレスポンス」を元に JSON を組み立てる
+    try:
+        data = resp.json()
+        print("[fetch_login_state] JSON parsed OK")
+    except Exception as e:
+        print(f"[fetch_login_state] JSON parse error: {e!r}")
+        # JSON としてパースできない場合も「生テキスト」を保存しておく
+        data = {
+            "raw_text": text,
+            "json_error": str(e),
+        }
+
+    # ★ 成功／失敗に関わらず、とにかく保存する
+    save_path = save_response("login_state", data)
+    print(f"[fetch_login_state] response saved to {save_path}")
+
+    # ここで HTTP エラーがあれば例外にする（上で保存は済んでいる）
+    try:
+        resp.raise_for_status()
+    except Exception as e:
+        print(f"[fetch_login_state] HTTP error: {e!r}")
+        # get_cma_status() から見えるように例外は投げ直す
+        raise
+
+    # 正常ケースだけ loginState を返しつつ、キャッシュに乗せる
+    if isinstance(data, dict):
+        login_state = data.get("data", {}).get("loginState", {})  # type: ignore[reportUnknownMemberType]
+    else:
+        login_state = {}
+
+    global _cached_login_state
+    _cached_login_state = login_state
+
+    return login_state
 
 
 def get_cma_status() -> dict[str, Any]:
@@ -178,8 +256,13 @@ def get_cma_status() -> dict[str, Any]:
         }
 
     try:
-        login_state = fetch_login_state()
-        account_name = login_state.get("accountName")
+        global _cached_login_state
+        login_state = _cached_login_state
+        if not login_state:
+            # まだ一度も取得していない場合だけ GraphQL を叩く
+            login_state = fetch_login_state()
+        # login_state は dict を想定
+        account_name = login_state.get("accountName") if isinstance(login_state, dict) else None
         display_name = resolve_account_display_name(account_name)
         return {
             "logged_in": True,
@@ -205,6 +288,9 @@ def login_via_playwright(profile_name: str | None) -> None:
     - ログイン完了後、CMA ダッシュボード URL に到達したら
       STATE_FILE に storage_state を保存して、ブラウザを閉じます。
     """
+    # ログインし直すので loginState キャッシュはクリア
+    global _cached_login_state
+    _cached_login_state = None
 
     email, password = resolve_login_profile(profile_name)
 

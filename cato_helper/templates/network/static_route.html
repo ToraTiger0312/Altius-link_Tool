@@ -13,20 +13,104 @@
     <h1 class="page-title">Static Route追加（Site）</h1>
 </div>
 
-<div class="tool-sections">
-    <div class="card">
-        <div class="card-header">
-            <div class="card-title">Site に Static Route を追加</div>
+<div id="static-route-page">
+    <div class="tool-sections">
+        <!-- 説明カード -->
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">このツールについて</div>
+                    <div class="card-subtitle">
+                        Static Route 追加時に参照したい Site / Network / SDP IP Range の一覧を取得します。
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <p>
+                    この画面では、CMA にログイン済みの環境に対して GraphQL を実行し、
+                    以下の情報をまとめて取得して表示します。
+                </p>
+                <ul style="margin-top: 8px; margin-left: 20px; font-size: 14px; list-style: disc;">
+                    <li>Site 一覧（Site 名 / Site ID）</li>
+                    <li>各 Site の Network 一覧（Interface 名 / Type / Subnet / Gateway など）</li>
+                    <li>SDP リモートユーザーの IP Range（Default / Dynamic / Static）</li>
+                </ul>
+                <p style="margin-top: 8px; font-size: 14px; color: #666;">
+                    CMA にログインしていない場合は、まず右上の「CMA ログイン」からログインしてください。
+                </p>
+            </div>
         </div>
-        <div class="card-body">
-            <p>
-                ここでは Cato の Site に対して Static Route を追加するツールを実装していきます。<br>
-                今の時点では画面ひな型だけで、Cato API との連携はまだ行っていません。
-            </p>
-            <p style="margin-top: 8px; font-size: 14px; color: #666;">
-                上部の「Network」タブと左側メニュー「Site関連の設定 → Static Route追加」が表示されていれば、
-                画面遷移の土台は完成です。
-            </p>
+
+        <!-- 操作カード -->
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">Static Route 参照データ</div>
+                    <div class="card-subtitle">
+                        Static Route 設定時に参照するための一覧情報です。
+                    </div>
+                </div>
+                <div>
+                    <button id="static-route-reload" class="btn btn-primary">
+                        再読み込み
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="static-route-status" style="font-size: 13px; color: #666; margin-bottom: 8px;">
+                    ページ表示時に自動でデータ取得を行います。
+                </div>
+
+                <div class="static-route-layout" style="display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; align-items: flex-start;">
+                    <!-- Site / Network 一覧 -->
+                    <div class="card" style="margin-top: 0;">
+                        <div class="card-header">
+                            <div class="card-title">Site / Network 一覧</div>
+                        </div>
+                        <div class="card-body">
+                            <div id="static-route-sites-container">
+                                <!-- JavaScript から動的に埋める -->
+                                <p style="font-size: 14px; color: #666;">
+                                    データ取得中、または Site 情報がありません。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SDP ユーザー IP Range 一覧 -->
+                    <div class="card" style="margin-top: 0;">
+                        <div class="card-header">
+                            <div class="card-title">リモートユーザー IP Range 一覧</div>
+                        </div>
+                        <div class="card-body">
+                            <table id="static-route-ipranges-table" class="table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40%;">種別</th>
+                                        <th>IP Range (CIDR)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- JavaScript から動的に埋める -->
+                                    <tr>
+                                        <td>Default IP Range</td>
+                                        <td>-</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Dynamic IP Range</td>
+                                        <td>-</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Static IP Range</td>
+                                        <td>-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </div>
 </div>
